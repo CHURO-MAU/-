@@ -3,7 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="シンプルで使いやすい日用品の在庫管理アプリ。消費予測機能で買い忘れを防止します。">
+    <meta name="theme-color" content="#6b8e7c">
     <title>おうち倉庫</title>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- iOS用のメタタグ -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="おうち倉庫">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192x192.png">
+
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -91,5 +106,51 @@
     </div>
 
     <script src="app.js"></script>
+
+    <!-- Service Worker登録 -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('✅ Service Worker registered:', registration.scope);
+
+                        // 新しいService Workerが利用可能になったときの処理
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // 新しいバージョンが利用可能
+                                    console.log('🔄 New version available! Please refresh.');
+                                    if (confirm('新しいバージョンが利用可能です。更新しますか？')) {
+                                        newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch((error) => {
+                        console.error('❌ Service Worker registration failed:', error);
+                    });
+
+                // Service Workerの更新をチェック
+                navigator.serviceWorker.ready.then((registration) => {
+                    registration.update();
+                });
+            });
+
+            // ページがService Workerによって制御されるようになったときにリロード
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) {
+                    refreshing = true;
+                    window.location.reload();
+                }
+            });
+        } else {
+            console.warn('⚠️ Service Worker is not supported in this browser');
+        }
+    </script>
 </body>
 </html>
